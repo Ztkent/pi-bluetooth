@@ -40,7 +40,7 @@ cd pitooth/cmd
 go build -v -o pitooth
 
 ## Accept incoming connections with a specified window:
-./pitooth -acceptConnections -connectionWindow=60 -alias=PiToothDevice
+./pitooth -alias=PiToothDevice -acceptConnections -connectionWindow=60 -log=debug
 
 ## Enable OBEX server with a path to store received files:
 ./pitooth -enableObex -obexPath=/path/to/obex/files

@@ -10,6 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+/*
+	Supports command-line functionality for PiTooth.
+*/
+
 func main() {
 	// Device Settings
 	deviceAlias := flag.String("alias", "PiToothDevice", "Bluetooth device alias")
