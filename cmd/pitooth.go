@@ -52,7 +52,17 @@ func main() {
 	} else if *acceptConnections {
 		acceptConnectionsFunc(manager, *connectionWindow)
 	} else {
-		fmt.Println("No action specified. Please use -enableObex or -disableObex.")
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Println("PiTooth is a command-line tool for managing Bluetooth connections and OBEX server.")
+		fmt.Println("\nOptions:")
+		flag.PrintDefaults()
+		fmt.Println("\nExamples:")
+		fmt.Println("\tEnable OBEX server with a specific path for server files:")
+		fmt.Println("\t\t" + os.Args[0] + " -enableObex -obexPath=/path/to/obex/files")
+		fmt.Println("\tDisable OBEX server:")
+		fmt.Println("\t\t" + os.Args[0] + " -disableObex")
+		fmt.Println("\tAccept incoming connections with a custom connection window:")
+		fmt.Println("\t\t" + os.Args[0] + " -acceptConnections -connectionWindow=60")
 		os.Exit(1)
 	}
 }
@@ -85,7 +95,7 @@ func acceptConnectionsFunc(btm pitooth.BluetoothManager, window int) {
 		fmt.Println("Setting connection window to 30 seconds.")
 		windowDuration = 30
 	}
-	devices, err := btm.AcceptConnections(time.Duration(windowDuration))
+	devices, err := btm.AcceptConnections(time.Duration(windowDuration) * time.Second)
 	if err != nil {
 		fmt.Println("Error accepting connections:", err)
 		os.Exit(1)

@@ -36,7 +36,7 @@ source ~/.bashrc
 ### As a tool
 ```bash
     ## Build the tool
-    cd pitooth
+    cd pitooth/cmd
     go build -v -o pitooth
 ```
 
