@@ -29,6 +29,8 @@ type BluetoothManager interface {
 	AcceptConnections(time.Duration) (map[string]Device, error)
 	GetNearbyDevices() (map[string]Device, error)
 	GetConnectedDevices() (map[string]Device, error)
+	// UnpairDevice(string) error
+	// ControlBluetoothPower(bool) error
 
 	// OBEX is a protocol for transferring files between devices over Bluetooth
 	ControlOBEXServer(bool, string) error
@@ -260,15 +262,6 @@ func (btm *bluetoothManager) Close(turnOff bool) {
 		btm.adapter.SetPowered(false)
 	}
 }
-
-// func (a *Adapter1) RemoveDevice(device dbus.ObjectPath) error {
-// 	return a.client.Call("RemoveDevice", 0, device).Store()
-// }
-
-// SetPowered set Powered value
-// func (a *Adapter1) SetPowered(v bool) error {
-// 	return a.SetProperty("Powered", v)
-// }
 
 func defaultLogger() *logrus.Logger {
 	l := logrus.New()

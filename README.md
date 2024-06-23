@@ -35,35 +35,44 @@ source ~/.bashrc
 
 ### As a tool
 ```bash
-    ## Build the tool
-    cd pitooth/cmd
-    go build -v -o pitooth
+## Build the tool
+cd pitooth/cmd
+go build -v -o pitooth
+
+## Accept incoming connections with a specified window:
+./pitooth -acceptConnections -connectionWindow=60 -alias=PiToothDevice
+
+## Enable OBEX server with a path to store received files:
+./pitooth -enableObex -obexPath=/path/to/obex/files
+
+## Disable OBEX server:
+./pitooth -disableObex
 ```
 
 ### As a library
 ```go
-    import (
-        "log"
-        "time"
-        "github.com/Ztkent/pitooth"
-    )
+import (
+    "log"
+    "time"
+    "github.com/Ztkent/pitooth"
+)
 
-	// Validate bluetooth functionality, then create a new Bluetooth Manager
-    btm, err := NewBluetoothManager("YourDeviceName")
-    if err != nil {
-    	log.Fatalf("Failed to create Bluetooth Manager: %v", err)
-    } 
+// Validate bluetooth functionality, then create a new Bluetooth Manager
+btm, err := NewBluetoothManager("YourDeviceName")
+if err != nil {
+    log.Fatalf("Failed to create Bluetooth Manager: %v", err)
+} 
 
-    // Become discoverable, and accept incoming connections for 30 seconds
-    connectedDevices, err := btm.AcceptConnections(time.Second * 30)
-    if err != nil {
-        log.Fatalf("Failed to accept connections: %v", err)
-    }
+// Become discoverable, and accept incoming connections for 30 seconds
+connectedDevices, err := btm.AcceptConnections(time.Second * 30)
+if err != nil {
+    log.Fatalf("Failed to accept connections: %v", err)
+}
 
-    // Enable the obexd server, and set the file transfer directory
-    if err := btm.ControlOBEXServer(true, "/home/sunlight/sunlight-meter"); err != nil {
-        log.Fatalf("Failed to start OBEX server: %v", err)
-    }
+// Enable the obexd server, and set the file transfer directory
+if err := btm.ControlOBEXServer(true, "/home/sunlight/sunlight-meter"); err != nil {
+    log.Fatalf("Failed to start OBEX server: %v", err)
+}
 
-    // At this point, any connected devices can send files to the Raspberry Pi.
+// At this point, any connected devices can send files to the Raspberry Pi.
 ```
