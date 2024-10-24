@@ -54,7 +54,7 @@ go build -v -o pitooth
 import (
     "log"
     "time"
-    "github.com/Ztkent/pitooth"
+    "github.com/ztkent/pitooth"
 )
 
 // Validate bluetooth functionality, then create a new Bluetooth Manager

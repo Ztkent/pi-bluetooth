@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Ztkent/pitooth"
+	"github.com/ztkent/pitooth"
 	"github.com/sirupsen/logrus"
 )
 
