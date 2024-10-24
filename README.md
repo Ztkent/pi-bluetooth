@@ -14,26 +14,18 @@ You can import it into your projects, or use it as a standalone tool.
 - Any Raspberry Pi device with Bluetooth
 - Go 1.21 or later
 
-To initally setup the Raspberry Pi, you can follow the steps below:
 ```bash
 ## Setup Golang
 wget https://go.dev/dl/go1.21.11.linux-armv6l.tar.gz
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.21.11.linux-armv6l.tar.gz && rm go1.21.11.linux-armv6l.tar.gz
-echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
 
-## Add obexd
+## Add obexd for file transfers
 sudo apt install bluez-obexd
-echo 'export PATH=$PATH:/usr/libexec/bluetooth/' >> ~/.bashrc
-source ~/.bashrc
-
-## [iwgetid]
-echo 'export PATH=$PATH:/usr/sbin' >> ~/.bashrc 
-source ~/.bashrc
 ```
 
 ## Usage
 
-### As a tool
+### CLI
 ```bash
 ## Build the tool
 cd pitooth/cmd
@@ -49,7 +41,7 @@ go build -v -o pitooth
 ./pitooth -disableObex
 ```
 
-### As a library
+### Library
 ```go
 import (
     "log"
