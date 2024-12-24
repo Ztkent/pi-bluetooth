@@ -12,19 +12,9 @@ You can import it into your projects, or use it as a standalone tool.
 
 ## Requirements
 - Any Raspberry Pi device with Bluetooth
-- Go 1.21 or later
-
-```bash
-## Setup Golang
-wget https://go.dev/dl/go1.21.11.linux-armv6l.tar.gz
-sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.21.11.linux-armv6l.tar.gz && rm go1.21.11.linux-armv6l.tar.gz
-
-## Add obexd for file transfers
-sudo apt install bluez-obexd
-```
+- Enable [Bluez ObexD](https://github.com/bluez/bluez)
 
 ## Usage
-
 ### CLI
 ```bash
 ## Build the tool
