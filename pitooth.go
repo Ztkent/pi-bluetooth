@@ -28,19 +28,19 @@ func init() {
 type BluetoothManager interface {
 	AcceptConnections(time.Duration) (map[string]Device, error)
 	GetNearbyDevices() (map[string]Device, error)
-	GetConnectedDevices() (map[string]Device, error)
-	// UnpairDevice(string) error
-	// ControlBluetoothPower(bool) error
+	GetAdapter() *adapter.Adapter1
 
 	// OBEX is a protocol for transferring files between devices over Bluetooth
 	ControlOBEXServer(bool, string) error
-	Close(bool)
+
+	Start()
+	Stop()
 }
 
 type bluetoothManager struct {
-	adapter *adapter.Adapter1
-	agent   *PiToothAgent
-	l       *logrus.Logger
+	agent *PiToothAgent
+	l     *logrus.Logger
+	*adapter.Adapter1
 }
 
 type Device struct {
@@ -79,9 +79,9 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	}
 
 	btm := bluetoothManager{
-		adapter: defaultAdapter,
-		agent:   pitoothAgent,
-		l:       defaultLogger(),
+		Adapter1: defaultAdapter,
+		agent:    pitoothAgent,
+		l:        defaultLogger(),
 	}
 
 	// Apply any options
@@ -93,17 +93,17 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	}
 
 	// Set the device alias
-	err = btm.adapter.SetAlias(deviceAlias)
+	err = btm.SetAlias(deviceAlias)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to set bluetooth alias: %v", err)
 	}
-	err = btm.adapter.SetPowered(true)
+	err = btm.SetPowered(true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to power on bluetooth adapter: %v", err)
 	}
 
 	// Apply the registration agent to the adapter
-	err = agent.ExposeAgent(btm.adapter.Client().GetConnection(), btm.agent, agent.CapNoInputNoOutput, true)
+	err = agent.ExposeAgent(btm.Client().GetConnection(), btm.agent, agent.CapNoInputNoOutput, true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to register agent: %v", err)
 	}
@@ -125,7 +125,7 @@ func WithLogger(l *logrus.Logger) BluetoothManagerOption {
 // WithAdapter configures a custom Bluetooth adapter that implements the Adapter1 interface
 func WithAdapter(a adapter.Adapter1) BluetoothManagerOption {
 	return func(bm *bluetoothManager) error {
-		bm.adapter = &a
+		bm.Adapter1 = &a
 		return nil
 	}
 }
@@ -140,20 +140,20 @@ func (btm *bluetoothManager) AcceptConnections(pairingWindow time.Duration) (map
 
 	// Make the device discoverable
 	btm.l.Debugln("PiTooth: Setting Discoverable...")
-	err := btm.adapter.SetDiscoverable(true)
+	err := btm.SetDiscoverable(true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to make device discoverable: %v", err)
 	}
 
 	btm.l.Debugln("PiTooth: Setting Pairable...")
-	err = btm.adapter.SetPairable(true)
+	err = btm.SetPairable(true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to make device pairable: %v", err)
 	}
 
 	// Start the discovery
 	btm.l.Debugln("PiTooth: Starting Discovery...")
-	err = btm.adapter.StartDiscovery()
+	err = btm.StartDiscovery()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to start bluetooth discovery: %v", err)
 	}
@@ -161,10 +161,10 @@ func (btm *bluetoothManager) AcceptConnections(pairingWindow time.Duration) (map
 	// Wait for the device to be discovered
 	btm.l.Infoln("PiTooth: Accepting Connections...")
 	// Hang out here until the window expires
-	connectedDevices := make(map[string]Device)
+	nearbyDevices := make(map[string]Device)
 	start := time.Now()
 	for time.Since(start) < pairingWindow {
-		connectedDevices, err = btm.GetConnectedDevices()
+		nearbyDevices, err = btm.GetNearbyDevices()
 	}
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get nearby devices: %v", err)
@@ -172,20 +172,20 @@ func (btm *bluetoothManager) AcceptConnections(pairingWindow time.Duration) (map
 
 	// Make the device undiscoverable
 	btm.l.Debugln("PiTooth: Setting Undiscoverable...")
-	err = btm.adapter.SetDiscoverable(false)
+	err = btm.SetDiscoverable(false)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to make device undiscoverable: %v", err)
 	}
 
 	// Stop the discovery
 	btm.l.Debugln("PiTooth: Stopping Discovery...")
-	err = btm.adapter.StopDiscovery()
+	err = btm.StopDiscovery()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to stop bluetooth discovery: %v", err)
 	}
 
-	btm.l.Debugln("PiTooth: Connected devices: ", connectedDevices)
-	return connectedDevices, nil
+	btm.l.Debugln("PiTooth: Found devices: ", nearbyDevices)
+	return nearbyDevices, nil
 }
 
 // Get a map of all the nearby devices
@@ -203,24 +203,6 @@ func (btm *bluetoothManager) GetNearbyDevices() (map[string]Device, error) {
 	return nearbyDevices, nil
 }
 
-// Check all nearby devices and return the connected ones
-func (btm *bluetoothManager) GetConnectedDevices() (map[string]Device, error) {
-	btm.l.Debugln("PiTooth: Starting GetConnectedDevices...")
-	nearbyDevices, err := btm.collectNearbyDevices()
-	if err != nil {
-		return nil, err
-	}
-
-	connectedDevices := make(map[string]Device)
-	for _, device := range nearbyDevices {
-		if device.Connected {
-			connectedDevices[device.Address] = device
-		}
-	}
-	btm.l.Debugln("PiTooth: # of connected devices: ", len(connectedDevices))
-	return connectedDevices, nil
-}
-
 // Get the devices every second, for 5 seconds.
 // Return a map of all the devices found.
 func (btm *bluetoothManager) collectNearbyDevices() (map[string]Device, error) {
@@ -234,7 +216,7 @@ func (btm *bluetoothManager) collectNearbyDevices() (map[string]Device, error) {
 		case <-done:
 			return nearbyDevices, nil
 		case <-ticker.C:
-			devices, err := btm.adapter.GetDevices()
+			devices, err := btm.GetDevices()
 			if err != nil {
 				return nil, fmt.Errorf("Failed to get bluetooth devices: %v", err)
 			}
@@ -251,16 +233,25 @@ func (btm *bluetoothManager) collectNearbyDevices() (map[string]Device, error) {
 	}
 }
 
+func (btm *bluetoothManager) Start() {
+	btm.SetPowered(true)
+	btm.SetPairable(true)
+	btm.SetDiscoverable(true)
+	btm.StartDiscovery()
+}
+
 // Close the active bluetooth adapter & agent
 // Optionally turn off the bluetooth device
-func (btm *bluetoothManager) Close(turnOff bool) {
-	btm.adapter.StopDiscovery()
-	btm.adapter.SetDiscoverable(false)
-	btm.adapter.SetPairable(false)
+func (btm *bluetoothManager) Stop() {
+	btm.StopDiscovery()
+	btm.SetDiscoverable(false)
+	btm.SetPairable(false)
 	btm.agent.Cancel()
-	if turnOff {
-		btm.adapter.SetPowered(false)
-	}
+	btm.SetPowered(false)
+}
+
+func (btm *bluetoothManager) GetAdapter() *adapter.Adapter1 {
+	return btm.Adapter1
 }
 
 func defaultLogger() *logrus.Logger {
