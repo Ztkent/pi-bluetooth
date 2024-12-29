@@ -2,6 +2,7 @@ package pitooth
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -26,6 +27,13 @@ func (btm *bluetoothManager) ControlOBEXServer(start bool, outputPath string) er
 	} else if !start && !isActive {
 		btm.l.Debugln("obexd is already stopped.")
 		return nil
+	}
+
+	// Check if the output folder exists, if it doesnt create it
+	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(outputPath, 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %v", err)
+		}
 	}
 
 	var cmd *exec.Cmd
