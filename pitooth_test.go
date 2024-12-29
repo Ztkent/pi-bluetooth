@@ -10,7 +10,7 @@ func Test_NewBluetoothManager(t *testing.T) {
 	if err != nil || btm == nil {
 		t.Fatalf("Failed to create Bluetooth Manager: %v", err)
 	}
-	btm.Close(true)
+	defer btm.Stop()
 }
 
 func Test_AcceptConnections(t *testing.T) {
@@ -18,7 +18,7 @@ func Test_AcceptConnections(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Bluetooth Manager: %v", err)
 	}
-	defer btm.Close(true)
+	defer btm.Stop()
 
 	connectedDevices, err := btm.AcceptConnections(time.Second * 30)
 	if err != nil {
@@ -34,7 +34,7 @@ func Test_StartStopOBEXServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Bluetooth Manager: %v", err)
 	}
-	defer btm.Close(true)
+	defer btm.Stop()
 
 	if err := btm.ControlOBEXServer(true, "/home/sunlight/sunlight-meter"); err != nil {
 		t.Fatalf("Failed to start OBEX server: %v", err)
