@@ -29,6 +29,7 @@ type BluetoothManager interface {
 	AcceptConnections(time.Duration) (map[string]Device, error)
 	GetNearbyDevices() (map[string]Device, error)
 	GetAdapter() *adapter.Adapter1
+	GetAgent() *PiToothAgent
 
 	// OBEX is a protocol for transferring files between devices over Bluetooth
 	ControlOBEXServer(bool, string) error
@@ -234,9 +235,10 @@ func (btm *bluetoothManager) collectNearbyDevices() (map[string]Device, error) {
 }
 
 func (btm *bluetoothManager) Start() {
+	btm.agent.Cancel()
 	btm.SetPowered(true)
-	btm.SetPairable(true)
 	btm.SetDiscoverable(true)
+	btm.SetPairable(true)
 	btm.StartDiscovery()
 }
 
@@ -252,6 +254,10 @@ func (btm *bluetoothManager) Stop() {
 
 func (btm *bluetoothManager) GetAdapter() *adapter.Adapter1 {
 	return btm.Adapter1
+}
+
+func (btm *bluetoothManager) GetAgent() *PiToothAgent {
+	return btm.agent
 }
 
 func defaultLogger() *logrus.Logger {
