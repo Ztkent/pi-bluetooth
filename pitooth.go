@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/agent"
 	"github.com/sirupsen/logrus"
@@ -29,7 +30,7 @@ type BluetoothManager interface {
 	AcceptConnections(time.Duration) (map[string]Device, error)
 	GetNearbyDevices() (map[string]Device, error)
 	GetAdapter() *adapter.Adapter1
-	GetAgent() *PiToothAgent
+	GetAgent() *agent.SimpleAgent
 
 	// OBEX is a protocol for transferring files between devices over Bluetooth
 	ControlOBEXServer(bool, string) error
@@ -39,8 +40,8 @@ type BluetoothManager interface {
 }
 
 type bluetoothManager struct {
-	agent *PiToothAgent
 	l     *logrus.Logger
+	agent *agent.SimpleAgent
 	*adapter.Adapter1
 }
 
@@ -73,15 +74,20 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 		return nil, fmt.Errorf("Failed to get default adapter: %v", err)
 	}
 
-	// Connect pitooth agent to handle pairing requests
-	pitoothAgent := &PiToothAgent{
-		SimpleAgent: agent.NewSimpleAgent(),
-		l:           defaultLogger(),
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to connect to system bus: %v", err)
+	}
+
+	ag := agent.NewSimpleAgent()
+	err = agent.ExposeAgent(conn, ag, agent.CapNoInputNoOutput, true)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to expose BT Agent: %s", err)
 	}
 
 	btm := bluetoothManager{
 		Adapter1: defaultAdapter,
-		agent:    pitoothAgent,
+		agent:    ag,
 		l:        defaultLogger(),
 	}
 
@@ -102,13 +108,6 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	if err != nil {
 		return nil, fmt.Errorf("Failed to power on bluetooth adapter: %v", err)
 	}
-
-	// Apply the registration agent to the adapter
-	err = agent.ExposeAgent(btm.Client().GetConnection(), btm.agent, agent.CapNoInputNoOutput, true)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to register agent: %v", err)
-	}
-
 	return &btm, nil
 }
 
@@ -118,7 +117,6 @@ type BluetoothManagerOption func(*bluetoothManager) error
 func WithLogger(l *logrus.Logger) BluetoothManagerOption {
 	return func(bm *bluetoothManager) error {
 		bm.l = l
-		bm.agent.l = l
 		return nil
 	}
 }
@@ -256,7 +254,7 @@ func (btm *bluetoothManager) GetAdapter() *adapter.Adapter1 {
 	return btm.Adapter1
 }
 
-func (btm *bluetoothManager) GetAgent() *PiToothAgent {
+func (btm *bluetoothManager) GetAgent() *agent.SimpleAgent {
 	return btm.agent
 }
 
