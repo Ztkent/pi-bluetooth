@@ -91,6 +91,22 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 		l:        defaultLogger(),
 	}
 
+	// Register the agent with the adapter
+	agentManager, err := agent.NewAgentManager1()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create agent manager: %v", err)
+	}
+
+	err = agentManager.RegisterAgent(ag.Path(), agent.CapNoInputNoOutput)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to register agent: %v", err)
+	}
+
+	err = agentManager.RequestDefaultAgent(ag.Path())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to request default agent: %v", err)
+	}
+
 	// Apply any options
 	for _, opt := range opts {
 		err := opt(&btm)
