@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/agent"
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,6 @@ type BluetoothManager interface {
 	AcceptConnections(time.Duration) (map[string]Device, error)
 	GetNearbyDevices() (map[string]Device, error)
 	GetAdapter() *adapter.Adapter1
-	GetAgent() *agent.SimpleAgent
 
 	// OBEX is a protocol for transferring files between devices over Bluetooth
 	ControlOBEXServer(bool, string) error
@@ -40,8 +38,7 @@ type BluetoothManager interface {
 }
 
 type bluetoothManager struct {
-	l     *logrus.Logger
-	agent *agent.SimpleAgent
+	l *logrus.Logger
 	*adapter.Adapter1
 }
 
@@ -74,37 +71,14 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 		return nil, fmt.Errorf("Failed to get default adapter: %v", err)
 	}
 
-	conn, err := dbus.SystemBus()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to system bus: %v", err)
-	}
-
-	ag := agent.NewSimpleAgent()
-	err = agent.ExposeAgent(conn, ag, agent.CapNoInputNoOutput, true)
+	err = agent.ExposeAgent(defaultAdapter.Client().GetConnection(), agent.NewSimpleAgent(), agent.CapNoInputNoOutput, true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to expose BT Agent: %s", err)
 	}
 
 	btm := bluetoothManager{
 		Adapter1: defaultAdapter,
-		agent:    ag,
 		l:        defaultLogger(),
-	}
-
-	// Register the agent with the adapter
-	agentManager, err := agent.NewAgentManager1()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to create agent manager: %v", err)
-	}
-
-	err = agentManager.RegisterAgent(ag.Path(), agent.CapNoInputNoOutput)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to register agent: %v", err)
-	}
-
-	err = agentManager.RequestDefaultAgent(ag.Path())
-	if err != nil {
-		return nil, fmt.Errorf("Failed to request default agent: %v", err)
 	}
 
 	// Apply any options
@@ -120,6 +94,7 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	if err != nil {
 		return nil, fmt.Errorf("Failed to set bluetooth alias: %v", err)
 	}
+
 	err = btm.SetPowered(true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to power on bluetooth adapter: %v", err)
@@ -249,7 +224,6 @@ func (btm *bluetoothManager) collectNearbyDevices() (map[string]Device, error) {
 }
 
 func (btm *bluetoothManager) Start() {
-	btm.agent.Cancel()
 	btm.SetPowered(true)
 	btm.SetDiscoverable(true)
 	btm.SetPairable(true)
@@ -262,16 +236,11 @@ func (btm *bluetoothManager) Stop() {
 	btm.StopDiscovery()
 	btm.SetDiscoverable(false)
 	btm.SetPairable(false)
-	btm.agent.Cancel()
 	btm.SetPowered(false)
 }
 
 func (btm *bluetoothManager) GetAdapter() *adapter.Adapter1 {
 	return btm.Adapter1
-}
-
-func (btm *bluetoothManager) GetAgent() *agent.SimpleAgent {
-	return btm.agent
 }
 
 func defaultLogger() *logrus.Logger {
