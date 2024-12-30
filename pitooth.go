@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/agent"
 	"github.com/sirupsen/logrus"
@@ -38,8 +39,9 @@ type BluetoothManager interface {
 }
 
 type bluetoothManager struct {
-	l *logrus.Logger
 	*adapter.Adapter1
+	agent *agent.SimpleAgent
+	l     *logrus.Logger
 }
 
 type Device struct {
@@ -49,7 +51,7 @@ type Device struct {
 	Connected bool
 }
 
-func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (BluetoothManager, error) {
+func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (*bluetoothManager, error) {
 	// We should always set a device alias, or it gets tricky.
 	if deviceAlias == "" {
 		return nil, fmt.Errorf("Bluetooth device alias cannot be empty")
@@ -71,13 +73,20 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 		return nil, fmt.Errorf("Failed to get default adapter: %v", err)
 	}
 
-	err = agent.ExposeAgent(defaultAdapter.Client().GetConnection(), agent.NewSimpleAgent(), agent.CapNoInputNoOutput, true)
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to connect to system bus: %v", err)
+	}
+
+	ag := agent.NewSimpleAgent()
+	err = agent.ExposeAgent(conn, ag, agent.CapNoInputNoOutput, true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to expose BT Agent: %s", err)
 	}
 
 	btm := bluetoothManager{
 		Adapter1: defaultAdapter,
+		agent:    ag,
 		l:        defaultLogger(),
 	}
 
@@ -94,11 +103,11 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	if err != nil {
 		return nil, fmt.Errorf("Failed to set bluetooth alias: %v", err)
 	}
-
 	err = btm.SetPowered(true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to power on bluetooth adapter: %v", err)
 	}
+
 	return &btm, nil
 }
 
