@@ -93,7 +93,7 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	}
 
 	// Apply the registration agent to the adapter
-	err = agent.ExposeAgent(btm.Client().GetConnection(), btm.agent, agent.SimpleAgentPinCode, true)
+	err = agent.ExposeAgent(btm.Client().GetConnection(), btm.agent, agent.CapNoInputNoOutput, true)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to register agent: %v", err)
 	}
