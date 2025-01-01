@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ztkent/pitooth"
 	"github.com/sirupsen/logrus"
+	"github.com/ztkent/pitooth"
 )
 
 /*
@@ -99,10 +99,9 @@ func acceptConnectionsFunc(btm pitooth.BluetoothManager, window int) {
 		fmt.Println("Setting connection window to 30 seconds.")
 		windowDuration = 30
 	}
-	devices, err := btm.AcceptConnections(time.Duration(windowDuration) * time.Second)
+	err := btm.AcceptConnections(time.Duration(windowDuration) * time.Second)
 	if err != nil {
 		fmt.Println("Error accepting connections:", err)
 		os.Exit(1)
 	}
-	fmt.Printf("%d active connections.\n", len(devices))
 }
