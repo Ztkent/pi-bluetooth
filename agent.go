@@ -10,7 +10,6 @@ import (
 	An Agent is how bluetooth controls the pairing process.
 	It is responsible for displaying the passkey, pincode, etc. to the user and handling the user's response.
 	Implementing this custom agent allows us to tap into the pairing process.
-	In this case, the goal is to allow trusted pairing without additional user interaction.
 */
 
 type PiToothAgent struct {
@@ -18,15 +17,9 @@ type PiToothAgent struct {
 	l *logrus.Logger
 }
 
-// This is called when a client that is already paired to the device tries to connect to it.
 func (a *PiToothAgent) AuthorizeService(device dbus.ObjectPath, uuid string) *dbus.Error {
 	a.l.Debugf("AuthorizeService called for device %s with UUID %s", device, uuid)
 	return a.SimpleAgent.AuthorizeService(device, uuid)
-}
-
-func (a *PiToothAgent) Cancel() *dbus.Error {
-	a.l.Debugln("Pairing cancelled")
-	return a.SimpleAgent.Cancel()
 }
 
 func (a *PiToothAgent) DisplayPasskey(device dbus.ObjectPath, passkey uint32, entered uint16) *dbus.Error {
@@ -37,31 +30,6 @@ func (a *PiToothAgent) DisplayPasskey(device dbus.ObjectPath, passkey uint32, en
 func (a *PiToothAgent) DisplayPinCode(device dbus.ObjectPath, pincode string) *dbus.Error {
 	a.l.Debugf("DisplayPinCode called for device %s with pincode %s", device, pincode)
 	return a.SimpleAgent.DisplayPinCode(device, pincode)
-}
-
-func (a *PiToothAgent) Interface() string {
-	a.l.Debugln("Interface called") // This is called when the agent is registered
-	return a.SimpleAgent.Interface()
-}
-
-func (a *PiToothAgent) PassCode() string {
-	a.l.Debugln("PassCode called")
-	return a.SimpleAgent.PassCode()
-}
-
-func (a *PiToothAgent) PassKey() uint32 {
-	a.l.Debugln("PassKey called")
-	return a.SimpleAgent.PassKey()
-}
-
-func (a *PiToothAgent) Path() dbus.ObjectPath {
-	a.l.Debugln("Path called")
-	return a.SimpleAgent.Path()
-}
-
-func (a *PiToothAgent) Release() *dbus.Error {
-	a.l.Debugln("Release called")
-	return a.SimpleAgent.Release()
 }
 
 func (a *PiToothAgent) RequestAuthorization(device dbus.ObjectPath) *dbus.Error {
@@ -92,4 +60,28 @@ func (a *PiToothAgent) SetPassCode(pinCode string) {
 func (a *PiToothAgent) SetPassKey(passkey uint32) {
 	a.l.Debugf("SetPassKey called with passkey %d", passkey)
 	a.SimpleAgent.SetPassKey(passkey)
+}
+
+func (a *PiToothAgent) Interface() string {
+	return a.SimpleAgent.Interface()
+}
+
+func (a *PiToothAgent) PassCode() string {
+	return a.SimpleAgent.PassCode()
+}
+
+func (a *PiToothAgent) PassKey() uint32 {
+	return a.SimpleAgent.PassKey()
+}
+
+func (a *PiToothAgent) Path() dbus.ObjectPath {
+	return a.SimpleAgent.Path()
+}
+
+func (a *PiToothAgent) Release() *dbus.Error {
+	return a.SimpleAgent.Release()
+}
+
+func (a *PiToothAgent) Cancel() *dbus.Error {
+	return a.SimpleAgent.Cancel()
 }

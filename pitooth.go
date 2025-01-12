@@ -20,17 +20,10 @@ import (
 	- Receive files from connected devices
 */
 
-func init() {
-	// Suppress excess warning logs from the bluetooth library
-	logrus.SetLevel(logrus.ErrorLevel)
-}
-
 type BluetoothManager interface {
 	AcceptConnections(time.Duration) error
 	GetNearbyDevices() (map[string]Device, error)
 	GetAdapter() *adapter.Adapter1
-
-	// OBEX is a protocol for transferring files between devices over Bluetooth
 	ControlOBEXServer(bool, string) error
 
 	Start()
@@ -51,12 +44,10 @@ type Device struct {
 }
 
 func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (BluetoothManager, error) {
-	// We should always set a device alias, or it gets tricky.
 	if deviceAlias == "" {
 		return nil, fmt.Errorf("Bluetooth device alias cannot be empty")
 	}
 
-	// Only support Linux, this should be running on a Raspberry Pi
 	if runtime.GOOS != "linux" {
 		return nil, fmt.Errorf("Unsupported OS: %v", runtime.GOOS)
 	} else {
@@ -66,25 +57,21 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 		}
 	}
 
-	// Get the bt adapter to manage bluetooth devices
 	defaultAdapter, err := adapter.GetDefaultAdapter()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get default adapter: %v", err)
 	}
 
-	// Connect pitooth agent to handle pairing requests
 	pitoothAgent := &PiToothAgent{
 		SimpleAgent: agent.NewSimpleAgent(),
 		l:           defaultLogger(),
 	}
-
 	btm := bluetoothManager{
 		Adapter1: defaultAdapter,
 		agent:    pitoothAgent,
 		l:        defaultLogger(),
 	}
 
-	// Apply any options
 	for _, opt := range opts {
 		err := opt(&btm)
 		if err != nil {
@@ -98,7 +85,6 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 		return nil, fmt.Errorf("Failed to register agent: %v", err)
 	}
 
-	// Set the device alias
 	err = btm.SetAlias(deviceAlias)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to set bluetooth alias: %v", err)
@@ -107,6 +93,7 @@ func NewBluetoothManager(deviceAlias string, opts ...BluetoothManagerOption) (Bl
 	if err != nil {
 		return nil, fmt.Errorf("Failed to power on bluetooth adapter: %v", err)
 	}
+
 	return &btm, nil
 }
 
@@ -161,7 +148,6 @@ func (btm *bluetoothManager) AcceptConnections(pairingWindow time.Duration) erro
 		time.Sleep(1 * time.Second)
 	}
 
-	// Make the device undiscoverable
 	btm.l.Debugln("PiTooth: Setting Undiscoverable...")
 	err = btm.SetDiscoverable(false)
 	if err != nil {
@@ -215,6 +201,7 @@ func (btm *bluetoothManager) collectNearbyDevices() (map[string]Device, error) {
 	}
 }
 
+// Turn on the bluetooth adapter and become discoverable
 func (btm *bluetoothManager) Start() {
 	btm.SetPowered(true)
 	btm.SetPairable(true)
@@ -222,7 +209,6 @@ func (btm *bluetoothManager) Start() {
 }
 
 // Close the active bluetooth adapter & agent
-// Optionally turn off the bluetooth device
 func (btm *bluetoothManager) Stop() {
 	btm.SetDiscoverable(false)
 	btm.SetPairable(false)
@@ -235,10 +221,8 @@ func (btm *bluetoothManager) GetAdapter() *adapter.Adapter1 {
 
 func defaultLogger() *logrus.Logger {
 	l := logrus.New()
-	// Setup the logger, so it can be parsed by datadog
 	l.Formatter = &logrus.JSONFormatter{}
 	l.SetOutput(os.Stdout)
-	// Set the log level
 	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))
 	switch logLevel {
 	case "debug":

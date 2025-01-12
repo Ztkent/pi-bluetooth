@@ -15,20 +15,15 @@ import (
 */
 
 func main() {
-	// Device Settings
 	deviceAlias := flag.String("alias", "PiToothDevice", "Bluetooth device alias")
 	logLevel := flag.String("log", "info", "Log level (debug, info, error)")
-	// Obex Options
-	enableObex := flag.Bool("enableObex", false, "Enable OBEX server")
-	disableObex := flag.Bool("disableObex", false, "Disable OBEX server")
-	obexPath := flag.String("obexPath", "", "Path for OBEX server files")
-	// Connection Options
-	acceptConnections := flag.Bool("acceptConnections", false, "Accept incoming connections")
-	connectionWindow := flag.Int("connectionWindow", 30, "Connection window in seconds")
-
+	enableObexFlag := flag.Bool("enableObex", false, "Enable OBEX server")
+	disableObexFlag := flag.Bool("disableObex", false, "Disable OBEX server")
+	obexPathFlag := flag.String("obexPath", "", "Path for OBEX server files")
+	acceptConnectionsFlag := flag.Bool("acceptConnections", false, "Accept incoming connections")
+	connectionWindowFlag := flag.Int("connectionWindow", 30, "Connection window in seconds")
 	flag.Parse()
 
-	// Set up logger
 	logger := logrus.New()
 	switch *logLevel {
 	case "debug":
@@ -41,20 +36,18 @@ func main() {
 		logger.SetLevel(logrus.InfoLevel)
 	}
 
-	// Initialize Bluetooth manager with options
 	manager, err := pitooth.NewBluetoothManager(*deviceAlias, pitooth.WithLogger(logger))
 	if err != nil {
 		fmt.Println("Error initializing Bluetooth manager:", err)
 		os.Exit(1)
 	}
 
-	// Handle options:
-	if *enableObex {
-		enableObexFunc(manager, *obexPath)
-	} else if *disableObex {
-		disableObexFunc(manager)
-	} else if *acceptConnections {
-		acceptConnectionsFunc(manager, *connectionWindow)
+	if *enableObexFlag {
+		enableObex(manager, *obexPathFlag)
+	} else if *disableObexFlag {
+		disableObex(manager)
+	} else if *acceptConnectionsFlag {
+		acceptConnections(manager, *connectionWindowFlag)
 	} else {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
 		fmt.Println("PiTooth is a command-line tool for managing Bluetooth connections and OBEX server.")
@@ -71,7 +64,7 @@ func main() {
 	}
 }
 
-func enableObexFunc(btm pitooth.BluetoothManager, obexPath string) {
+func enableObex(btm pitooth.BluetoothManager, obexPath string) {
 	if obexPath == "" {
 		fmt.Println("Error: OBEX path is required when enabling OBEX server.")
 		os.Exit(1)
@@ -84,7 +77,7 @@ func enableObexFunc(btm pitooth.BluetoothManager, obexPath string) {
 	fmt.Println("OBEX server controlled successfully.")
 }
 
-func disableObexFunc(btm pitooth.BluetoothManager) {
+func disableObex(btm pitooth.BluetoothManager) {
 	err := btm.ControlOBEXServer(false, "")
 	if err != nil {
 		fmt.Println("Error controlling OBEX server:", err)
@@ -93,7 +86,7 @@ func disableObexFunc(btm pitooth.BluetoothManager) {
 	fmt.Println("OBEX server controlled successfully.")
 }
 
-func acceptConnectionsFunc(btm pitooth.BluetoothManager, window int) {
+func acceptConnections(btm pitooth.BluetoothManager, window int) {
 	windowDuration := int64(window)
 	if windowDuration <= 0 {
 		fmt.Println("Setting connection window to 30 seconds.")

@@ -13,14 +13,10 @@ import (
 */
 
 // Raspberry Pi as OBEX Server: Configure obexd to accept incoming connections and receive files.
-// Sending the files must be handled by the client. Any files received will be saved in the specified directory.
 func (btm *bluetoothManager) ControlOBEXServer(start bool, outputPath string) error {
-	// Check the current status of obexd
 	pgrepCmd := exec.Command("pgrep", "obexd")
 	pidBytes, err := pgrepCmd.Output()
 	isActive := err == nil
-
-	// Decide whether to start or stop based on the desired state and current status
 	if start && isActive {
 		btm.l.Debugln("obexd is already running.")
 		return nil
@@ -29,7 +25,6 @@ func (btm *bluetoothManager) ControlOBEXServer(start bool, outputPath string) er
 		return nil
 	}
 
-	// Check if the output folder exists, if it doesnt create it
 	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(outputPath, 0755); err != nil {
 			return fmt.Errorf("failed to create output directory: %v", err)
@@ -38,16 +33,13 @@ func (btm *bluetoothManager) ControlOBEXServer(start bool, outputPath string) er
 
 	var cmd *exec.Cmd
 	if start {
-		// Command to start the obexd service
 		btm.l.Debugln("Starting obexd service... ")
 		cmd = exec.Command("obexd", "-a", "-r", outputPath)
 	} else {
-		// Command to stop the obexd service
 		btm.l.Debugln("Stopping obexd service...")
 		cmd = exec.Command("killall", "obexd")
 	}
 
-	// Execute the command
 	if err := cmd.Start(); err != nil {
 		if start {
 			return fmt.Errorf("failed to start obexd: %v", err)
